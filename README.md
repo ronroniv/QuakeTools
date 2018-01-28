@@ -2,7 +2,7 @@
 
 Little tool(s) made with my crappy programming to aid Quake 1 mapping. Lightstyle Viewer is the only tool right now.
 
-## Lightstyle Viewer
+## [Lightstyle Viewer](/lightstyle_viewer/)
 You can preview default lightstyles and test custom style.
 
 ### TODO:
