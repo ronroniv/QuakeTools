@@ -6,9 +6,8 @@ Little tool(s) made with my crappy programming to aid Quake 1 mapping. Lightstyl
 You can preview default lightstyles and test custom style.
 
 ### TODO:
-* GUI editor?
+* GUI editor & visualizer?
 * Beautify
-* Label default styles
 * Prevent entering non-alphabet to input field for custome style
 
 ### Credits
