@@ -14,4 +14,5 @@ You can preview default lightstyles and test custom style.
 Mostly for fun. It's not like this kind of tool has been sorely needed for me or, I guess, Quake mappers in general, but this just seemed like a good opportunity for me to practicing tool development and javascript.
 
 ### Credits
-Made with [p5.js](https://p5js.org/) and p5.dom.js.
+* Made with [p5.js](https://p5js.org/) and p5.dom.js.
+* Cube texture is from Quake.
