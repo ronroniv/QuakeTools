@@ -1,4 +1,4 @@
-var light_radius = 150;
+var shape_radius = 150;
 
 var flickering = true;
 
@@ -12,15 +12,20 @@ var interval_modif = 1.0;
 var previous_time = 0.0;
 var current_index = 0;
 
-var bg_color = "#000000";
-var light_stroke = false;
+var bg_color = "#222222";
+var shape_stroke = false;
 
+var is_viewmode_3d = true;
 var canvas;
-var style_input, selection, radius_slider, colorpicker, stroke_check;
+var style_input, selection, radius_slider, colorpicker, stroke_check, view_check, spin_check;
 var header, label_input, desc_input, label_selec, label_setting;
-var gui_margin_left = 40;
-var gui_margin_top = 70;
-var gui_element_margin = 20;
+var canvas_width = 400;
+var canvas_height = 400;
+
+var texture_def;
+var spinning = false;
+var spin_time;
+var spin_time_def;
 
 var stat_length;
 var bar_height = 100;
@@ -46,9 +51,16 @@ var default_styles = ["m",
 					  "abcdefghijklmnopqrrqponmlkjihgfedcba"];
 
 
+function preload() {
+	texture_def = loadImage("images/city2_1.png");
+}
+
 function setup() {
-	canvas = createCanvas(400, 400);
-	canvas.parent("canvas_container");
+	canvas = createCanvas(canvas_width, canvas_height, WEBGL);
+	setAttributes('antialias', true);
+	var fov = 60 / 180 * PI;
+	var cameraZ = height / 2.0 / tan(fov / 2.0);
+	perspective(60 / 180 * PI, width / height, cameraZ * 0.1, cameraZ * 10);
 
 	var choice = floor(random() * (default_styles.length - 1)) + 1;
 	current_style = default_styles[choice];
@@ -67,14 +79,17 @@ function setup() {
 	setupGUI(choice);
 	setupStats();
 
-	previous_time = millis();
-
 	bar_c1 = color(255);
 	bar_c2 = color(0);
+
+	spin_time_def =  radians(-45) / 0.01;
+	spin_time = spin_time_def;
+
+	previous_time = millis();
 }
 
 function setupGUI(choice) {
-	header = createElement("h1", "Quake 1 Light Style Viewer");
+	header = createElement("h1", "Quake 1 Lightstyle Viewer");
 	header.parent("gui_container");
 
 	label_selec = createP("<b>Default Styles</b>");
@@ -87,8 +102,6 @@ function setupGUI(choice) {
  	}
   	selection.changed(selectionChanged);
   	selection.value(default_style_names[choice]);
-
-	createElement("hr").parent("gui_container");
 
 	label_input = createP("<b>Custom Style</b> (Enter 'a' to 'z' value without space. 'a' is total dark, 'z' is fullbright, and 'm' is normal light. Each letter represents 0.1 seconds.)");
   	label_input.parent("gui_container");
@@ -105,26 +118,35 @@ function setupGUI(choice) {
 
   	createElement("hr").parent("gui_container");
 
-  	label_setting = createP("<b>Viewer Settings</b>");
+  	label_setting = createP("<h2>Viewer Settings</h2>");
   	label_setting.parent("gui_container");
 
-  	createSpan("Light Radius: ").parent("gui_container");
+  	view_check = createCheckbox("3D View (not necessarily an accurate emulation of Quake 1 rendering)", is_viewmode_3d);
+  	view_check.changed(viewChanged);
+	view_check.parent("gui_container");
 
-	radius_slider = createSlider(50, canvas.width + 200, light_radius);
-	radius_slider.parent("gui_container");
-  	radius_slider.style("width", "100px");
-
-  	createSpan(" / Background: ").parent("gui_container");
+	createSpan("Background color: ").parent("gui_container");
 
   	colorpicker = createInput(bg_color, "color");
   	colorpicker.input(bgColorChanged);
   	colorpicker.parent("gui_container");
 
-  	createP("").parent("gui_container");
+	createP("<b>[2D]</b>").parent("gui_container");
+  	createSpan("Shape Radius: ").parent("gui_container");
 
-  	stroke_check = createCheckbox("Show Border", light_stroke);
-  	stroke_check.changed(lightStrokeChanged);
+	radius_slider = createSlider(50, canvas.width + 200, shape_radius);
+	radius_slider.parent("gui_container");
+  	radius_slider.style("width", "100px");
+
+  	stroke_check = createCheckbox("Show Border", shape_stroke);
+  	stroke_check.changed(shapeStrokeChanged);
   	stroke_check.parent("gui_container");
+
+  	createP("<b>[3D]</b>").parent("gui_container");
+
+  	spin_check = createCheckbox("Spin box", spinning);
+  	spin_check.changed(spinChanged);
+  	spin_check.parent("gui_container");
 }
 
 function setupStats () {
@@ -134,6 +156,15 @@ function setupStats () {
 	stat_length.parent("stats");
 
 	createSpan(" second(s)").parent("stats");
+}
+
+function setGradient(x, y, w, h, c1, c2) {
+	for (var i = y; i <= y+h; i++) {
+		var inter = map(i, y, y+h, 0, 1);
+		var c = lerpColor(c1, c2, inter);
+		stroke(c);
+		line(x, i, x+w, i);
+	}
 }
 
 function customStyleEntered() {
@@ -151,30 +182,23 @@ function bgColorChanged() {
 	bg_color = colorpicker.value();
 }
 
-function lightStrokeChanged() {
-	light_stroke = this.checked();
+function shapeStrokeChanged() {
+	shape_stroke = this.checked();
+}
+
+function viewChanged() {
+	is_viewmode_3d = this.checked();
+}
+
+function spinChanged() {
+	spin_time = spin_time_def;
+	spinning = this.checked();
 }
 
 function initializePattern() {
 	generatePattern();
 	stat_length.html(length);
 	current_index = 0;
-}
-
-function draw() {
-	background(bg_color);
-	if (flickering) {
-		flick();
-	}
-}
-
-function setGradient(x, y, w, h, c1, c2) {
-	for (var i = y; i <= y+h; i++) {
-		var inter = map(i, y, y+h, 0, 1);
-		var c = lerpColor(c1, c2, inter);
-		stroke(c);
-		line(x, i, x+w, i);
-	}
 }
 
 function generatePattern() {
@@ -184,26 +208,59 @@ function generatePattern() {
 		var new_value = string_array[i].charCodeAt();
 		pattern.push(cha2num.get(new_value) / 25);
 	}
-	length = (pattern.length * interval) / 1000
+	length = (pattern.length * interval) / 1000;
+}
+
+function draw() {
+	background(bg_color);
+
+	if (is_viewmode_3d) {
+		// orbitControl();
+		rotateX(radians(-35));
+		if (spinning){
+			spin_time += 1
+			rotateY(spin_time * 0.01);
+		} else {
+			rotateY(radians(-45));
+		}
+		
+		texture(texture_def);
+		box(150);
+	} else {
+		if (shape_stroke) {
+			stroke(255);
+			strokeWeight(5);
+		} else {
+			strokeWeight(0);
+		}
+
+		shape_radius = radius_slider.value();
+	}
+
+	if (flickering) {
+		flick();
+	}
 }
 
 function flick() {
-	if (light_stroke) {
-		stroke(255);
-		strokeWeight(3);
+	if (is_viewmode_3d) {
+		var l = 255 * pattern[current_index];
+		var dirX = (mouseX / width - 0.5) * 2;
+		var dirY = (mouseY / height - 0.5) * 2;
+		// console.log("array: " + pattern + "[" + current_index + "] =" + pattern[current_index]);
+		// ambientLight(100);
+		directionalLight(l, l, l, 1.0, 1.5, -5.0);
+	} else {
+		fill(255 * pattern[current_index]);
+		ellipse(0, 0, shape_radius, shape_radius, 48, 48);
 	}
-	else {
-		strokeWeight(0);
-	}
-	
-	light_radius = radius_slider.value();
-	fill(255 * pattern[current_index]);
-	ellipse(width / 2, height / 2, light_radius, light_radius);
+
 	if ((millis() - previous_time) >= ((interval) / interval_modif)) {
 		current_index += 1;
 		previous_time = millis();
 	}
-	if (current_index > pattern.length) {
+
+	if (current_index > pattern.length - 1) {
 		current_index = 0;
 	}
 }
