@@ -52,12 +52,20 @@ var default_styles = ["m",
 
 
 function preload() {
-	texture_def = loadImage("images/city2_1.png");
+	switch(window.location.protocol) {
+		case "http:":
+		case "https:":
+			texture_def = loadImage("images/city2_1.png");
+			break;
+		case "file:":
+			texture_def = loadImage("https://raw.githubusercontent.com/ronroniv/QuakeTools/master/lightstyle_viewer/images/city2_1.png");
+			break;
+	}
 }
 
 function setup() {
 	canvas = createCanvas(canvas_width, canvas_height, WEBGL);
-	setAttributes('antialias', true);
+	setAttributes("antialias", true);
 	var fov = 60 / 180 * PI;
 	var cameraZ = height / 2.0 / tan(fov / 2.0);
 	perspective(60 / 180 * PI, width / height, cameraZ * 0.1, cameraZ * 10);
@@ -245,10 +253,6 @@ function draw() {
 function flick() {
 	if (is_viewmode_3d) {
 		var l = 255 * pattern[current_index];
-		var dirX = (mouseX / width - 0.5) * 2;
-		var dirY = (mouseY / height - 0.5) * 2;
-		// console.log("array: " + pattern + "[" + current_index + "] =" + pattern[current_index]);
-		// ambientLight(100);
 		directionalLight(l, l, l, 1.0, 1.5, -5.0);
 	} else {
 		fill(255 * pattern[current_index]);
@@ -260,7 +264,7 @@ function flick() {
 		previous_time = millis();
 	}
 
-	if (current_index > pattern.length - 1) {
+	if (current_index >= pattern.length) {
 		current_index = 0;
 	}
 }
